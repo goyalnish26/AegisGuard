@@ -1,0 +1,71 @@
+{
+  "rules": [
+    {
+      "id": "RULE_SSH_FAILED_PWD",
+      "name": "Failed SSH Login Attempt",
+      "log_type": "auth",
+      "severity": "Low",
+      "pattern": "Failed password for (invalid user )?(\\S+) from (\\d+\\.\\d+\\.\\d+\\.\\d+)",
+      "description": "A failed SSH authentication attempt was detected.",
+      "extract_fields": {
+        "user": 2,
+        "ip": 3
+      }
+    },
+    {
+      "id": "RULE_SSH_BRUTE_FORCE",
+      "name": "SSH Login Brute Force",
+      "log_type": "auth",
+      "severity": "High",
+      "description": "Multiple failed SSH login attempts from the same IP address.",
+      "is_stateful": true,
+      "trigger_rule_id": "RULE_SSH_FAILED_PWD",
+      "threshold_count": 5,
+      "time_window_seconds": 60
+    },
+    {
+      "id": "RULE_SQL_INJECTION",
+      "name": "SQL Injection Attempt",
+      "log_type": "web",
+      "severity": "Critical",
+      "pattern": "(?i)(union\\s+select|select\\s+.*\\s+from|insert\\s+into|'\\s+or\\s+'\\d+'\\s*=\\s*'\\d+)",
+      "description": "SQL injection signatures detected in the request URL or parameters.",
+      "extract_fields": {
+        "ip": 0
+      }
+    },
+    {
+      "id": "RULE_DIR_TRAVERSAL",
+      "name": "Directory Traversal Attempt",
+      "log_type": "web",
+      "severity": "High",
+      "pattern": "(\\.{2}/|\\.{2}\\\\|/etc/passwd|/boot\\.ini|win\\.ini)",
+      "description": "Directory traversal attempt targeting sensitive files or path evasion.",
+      "extract_fields": {
+        "ip": 0
+      }
+    },
+    {
+      "id": "RULE_XSS_ATTEMPT",
+      "name": "Cross-Site Scripting (XSS) Attempt",
+      "log_type": "web",
+      "severity": "High",
+      "pattern": "(?i)(<script>|javascript:|onerror\\s*=|onload\\s*=|<svg)",
+      "description": "XSS script execution tags detected in incoming web request.",
+      "extract_fields": {
+        "ip": 0
+      }
+    },
+    {
+      "id": "RULE_SENSITIVE_PATH",
+      "name": "Sensitive Path Access",
+      "log_type": "web",
+      "severity": "Medium",
+      "pattern": "(?i)(/\\.env|/wp-admin|/admin|/config|/setup\\.php|/phpinfo\\.php)",
+      "description": "Access attempt targeting administrative, configuration, or environment files.",
+      "extract_fields": {
+        "ip": 0
+      }
+    }
+  ]
+}

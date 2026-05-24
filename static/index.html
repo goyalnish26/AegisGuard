@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisGuard // Mini-SIEM Cyber SOC</title>
+    <!-- Google Fonts: Share Tech Mono, Orbitron, and Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Cyber Background Canvas for matrix rain effect -->
+    <canvas id="cyber-canvas"></canvas>
+    
+    <!-- CRT Scanline Effect Overlay -->
+    <div class="scanlines"></div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar cyber-panel">
+            <div class="brand">
+                <i class="fa-solid fa-terminal brand-icon"></i>
+                <h2>AEGIS<span>GUARD</span></h2>
+            </div>
+            
+            <div class="system-status-indicator secured" id="system-status-container">
+                <span class="status-dot pulsing" id="status-dot"></span>
+                <span id="status-text">SYSTEM SECURED</span>
+            </div>
+
+            <nav class="nav-links">
+                <a href="#dashboard" class="active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+                <a href="#simulator"><i class="fa-solid fa-circle-play"></i> Threat Simulator</a>
+                <a href="#alerts"><i class="fa-solid fa-bell"></i> Alerts Feed</a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>CONSOLE LEVEL: ROOT</p>
+                <p>AegisGuard Daemon v1.0.0</p>
+                <span class="badge">DEFENSE ON</span>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard Area -->
+        <main class="main-content" id="dashboard">
+            <!-- Header -->
+            <header class="header cyber-panel">
+                <div class="header-title">
+                    <div class="term-tag">// SEGMENT: SEC_SOC_ALPHA</div>
+                    <h1>Security Operations Center</h1>
+                    <p>Real-time log intrusion telemetry, anomaly checks, and daemon analytics</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="clearAllAlerts()">
+                        <i class="fa-solid fa-trash-can"></i> Purge DB
+                    </button>
+                    <button class="btn btn-primary" onclick="fetchData()">
+                        <i class="fa-solid fa-rotate"></i> Refresh Feed
+                    </button>
+                </div>
+            </header>
+
+            <!-- Metrics Cards Grid -->
+            <section class="metrics-grid">
+                <div class="metric-card cyber-panel">
+                    <div class="metric-icon alert-blue"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="metric-info">
+                        <h3>Total Incidents</h3>
+                        <p id="stat-total" class="cyber-value">0</p>
+                    </div>
+                </div>
+                <div class="metric-card cyber-panel">
+                    <div class="metric-icon alert-yellow"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="metric-info">
+                        <h3>Active Incidents</h3>
+                        <p id="stat-active" class="cyber-value">0</p>
+                    </div>
+                </div>
+                <div class="metric-card cyber-panel">
+                    <div class="metric-icon alert-red"><i class="fa-solid fa-skull-crossbones"></i></div>
+                    <div class="metric-info">
+                        <h3>Critical Alerts</h3>
+                        <p id="stat-critical" class="cyber-value">0</p>
+                    </div>
+                </div>
+                <div class="metric-card cyber-panel">
+                    <div class="metric-icon alert-green"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="metric-info">
+                        <h3>Security Feeds</h3>
+                        <p class="cyber-value-feed">3 Active</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="chart-container cyber-panel grid-col-2">
+                    <div class="chart-header">
+                        <h4><i class="fa-solid fa-chart-pie"></i> Anomaly Severity Breakdown</h4>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="severityChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-container cyber-panel grid-col-1">
+                    <div class="chart-header">
+                        <h4><i class="fa-solid fa-skull"></i> High Risk Offenders</h4>
+                    </div>
+                    <div class="chart-body">
+                        <ul class="top-ips-list" id="top-ips-list">
+                            <li class="empty-state">No offender metrics found.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Live Cyber Tactical Console Section -->
+            <section class="dashboard-section cyber-panel" id="console-sec">
+                <div class="section-header console-header">
+                    <div>
+                        <h2><i class="fa-solid fa-terminal"></i> AegisGuard Live Tactical Console</h2>
+                        <p>Real-time security daemon logs and raw event telemetry stream</p>
+                    </div>
+                    <div class="terminal-status-light">
+                        <span class="pulse-indicator green"></span>
+                        <span class="status-label">FEED ON</span>
+                    </div>
+                </div>
+                <div class="cyber-terminal">
+                    <div class="terminal-body" id="terminal-body">
+                        <div class="terminal-line system-msg">[SYSTEM] AegisGuard Core engine loaded. Daemon started.</div>
+                    </div>
+                    <div class="terminal-footer">
+                        <span><i class="fa-solid fa-circle-nodes"></i> PORT: 8000</span>
+                        <span><i class="fa-solid fa-server"></i> DAEMON: ACTIVE</span>
+                        <span><i class="fa-solid fa-code-branch"></i> BRANCH: MAIN</span>
+                        <span class="active-cursor">_</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Simulator Section -->
+            <section class="dashboard-section cyber-panel" id="simulator">
+                <div class="section-header">
+                    <h2><i class="fa-solid fa-bug"></i> Threat Simulator Console</h2>
+                    <p>Execute synthetic threat patterns to validate security signature detection rules</p>
+                </div>
+                <div class="simulator-grid">
+                    <button class="sim-btn sim-normal" onclick="triggerSimulation('normal')">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>Normal Logs</span>
+                        <small>HTTP/HTTPS regular requests</small>
+                    </button>
+                    
+                    <button class="sim-btn sim-danger" onclick="triggerSimulation('brute_force')">
+                        <i class="fa-solid fa-unlock-keyhole"></i>
+                        <span>SSH Brute Force</span>
+                        <small>Simulate SSH credential stuffing</small>
+                    </button>
+                    
+                    <button class="sim-btn sim-danger" onclick="triggerSimulation('sqli')">
+                        <i class="fa-solid fa-database"></i>
+                        <span>SQL Injection</span>
+                        <small>UNION SELECT & SQL injection payloads</small>
+                    </button>
+                    
+                    <button class="sim-btn sim-danger" onclick="triggerSimulation('xss')">
+                        <i class="fa-solid fa-code"></i>
+                        <span>XSS Attack</span>
+                        <small>Cross-Site Scripting input scripts</small>
+                    </button>
+                    
+                    <button class="sim-btn sim-warning" onclick="triggerSimulation('dir_traversal')">
+                        <i class="fa-solid fa-folder-open"></i>
+                        <span>Directory Traversal</span>
+                        <small>Relative path attacks (/etc/passwd)</small>
+                    </button>
+                    
+                    <button class="sim-btn sim-warning" onclick="triggerSimulation('sensitive_path')">
+                        <i class="fa-solid fa-shield-virus"></i>
+                        <span>Sensitive Path Scan</span>
+                        <small>Targeting config & .env routes</small>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Alerts Feed Section -->
+            <section class="dashboard-section cyber-panel" id="alerts">
+                <div class="section-header flex-header">
+                    <div>
+                        <h2><i class="fa-solid fa-receipt"></i> Real-time Incident Feed</h2>
+                        <p>Aggregated log indicators flagged by signature engine rules</p>
+                    </div>
+                    <div class="feed-filters">
+                        <select id="filter-severity" onchange="fetchData()">
+                            <option value="">All Severities</option>
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                        <select id="filter-status" onchange="fetchData()">
+                            <option value="">All Statuses</option>
+                            <option value="New">New</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Dismissed">Dismissed</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="alerts-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Incident Name</th>
+                                <th>Source IP</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alerts-tbody">
+                            <tr>
+                                <td colspan="6" class="table-empty">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> Reading log databases...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Alert Detail Modal -->
+    <div class="modal-overlay" id="alert-modal">
+        <div class="modal cyber-panel">
+            <div class="modal-header">
+                <h3 id="modal-title">ALERT DECRYPTION</h3>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-info-row">
+                    <div>
+                        <strong>Timestamp:</strong>
+                        <span id="modal-timestamp">-</span>
+                    </div>
+                    <div>
+                        <strong>Source IP:</strong>
+                        <span id="modal-ip" class="highlight">-</span>
+                    </div>
+                </div>
+                <div class="modal-info-row">
+                    <div>
+                        <strong>Rule Violated:</strong>
+                        <span id="modal-rule">-</span>
+                    </div>
+                    <div>
+                        <strong>Severity:</strong>
+                        <span id="modal-severity" class="badge">-</span>
+                    </div>
+                </div>
+                <div class="modal-desc-block">
+                    <strong>Incident Description:</strong>
+                    <p id="modal-desc">-</p>
+                </div>
+                <div class="modal-log-block">
+                    <strong>Raw Log Line:</strong>
+                    <pre><code id="modal-raw-log">-</code></pre>
+                </div>
+            </div>
+            <div class="modal-footer" id="modal-footer-actions">
+                <!-- Injected dynamically -->
+            </div>
+        </div>
+    </div>
+    
+    <script src="/static/app.js"></script>
+</body>
+</html>
