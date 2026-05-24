@@ -106,25 +106,19 @@ def trigger_simulation(request: SimulateRequest, background_tasks: BackgroundTas
     return {"status": "success", "message": f"Simulation of {request.attack_type} started in the background."}
 
 # Mount static files (Frontend code)
-static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
-if not os.path.exists(static_dir):
-    os.makedirs(static_dir, exist_ok=True)
-
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-@app.get("/")
-def read_root():
-    index_path = os.path.join(static_dir, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"status": "success", "message": "AegisGuard API is running. Dashboard is not yet created in /static."}
+docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "docs")
+if not os.path.exists(docs_dir):
+    os.makedirs(docs_dir, exist_ok=True)
 
 @app.get("/dashboard")
 def read_dashboard():
-    index_path = os.path.join(static_dir, "index.html")
+    index_path = os.path.join(docs_dir, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"status": "success", "message": "AegisGuard API is running. Dashboard is not yet created in /static."}
+    return {"status": "success", "message": "AegisGuard Dashboard not found."}
+
+# Mount static files at root (/) after all API routes so relative URLs work in both environments
+app.mount("/", StaticFiles(directory=docs_dir, html=True), name="docs")
 
 
 if __name__ == "__main__":

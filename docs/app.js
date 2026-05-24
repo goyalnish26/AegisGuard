@@ -1,3 +1,253 @@
+const isDemoMode = window.location.hostname.includes("github.io") || window.location.protocol === "file:";
+
+if (isDemoMode) {
+    console.log("[AegisGuard] Running in DEMO / MOCK Mode (Local Storage DB)");
+    setupMockDatabase();
+    
+    // Override fetch to support serverless deployment on GitHub Pages
+    const originalFetch = window.fetch;
+    window.fetch = async function(url, options) {
+        const urlStr = url.toString();
+        
+        if (urlStr.includes("/api/stats")) {
+            return mockResponse(getMockStats());
+        }
+        
+        if (urlStr.includes("/api/alerts?")) {
+            const urlObj = new URL(urlStr, window.location.origin);
+            const severity = urlObj.searchParams.get("severity");
+            const status = urlObj.searchParams.get("status");
+            return mockResponse(getMockAlerts(severity, status));
+        }
+        
+        if (urlStr.includes("/api/alerts/") && urlStr.endsWith("/resolve")) {
+            const match = urlStr.match(/\/api\/alerts\/(\d+)\/resolve/);
+            if (match) {
+                const id = parseInt(match[1]);
+                const body = JSON.parse(options.body);
+                updateMockAlertStatus(id, body.status);
+                return mockResponse({ status: "success", message: `Alert status updated to ${body.status}` });
+            }
+        }
+        
+        if (urlStr.includes("/api/alerts/clear")) {
+            clearMockAlerts();
+            return mockResponse({ status: "success", message: "All alerts cleared" });
+        }
+        
+        if (urlStr.includes("/api/simulate")) {
+            const body = JSON.parse(options.body);
+            triggerMockSimulation(body.attack_type);
+            return mockResponse({ status: "success", message: `Simulation of ${body.attack_type} started` });
+        }
+        
+        return originalFetch(url, options);
+    };
+}
+
+function mockResponse(data) {
+    return new Response(JSON.stringify(data), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
+
+function setupMockDatabase() {
+    if (!localStorage.getItem("aegis_alerts")) {
+        const now = new Date();
+        const defaultAlerts = [
+            {
+                id: 1,
+                timestamp: new Date(now - 3600000 * 2).toISOString(),
+                rule_name: "SQL Injection Attempt",
+                source_ip: "198.51.100.42",
+                severity: "Critical",
+                status: "New",
+                description: "SQL injection signatures detected in the request URL or parameters.",
+                raw_log: '198.51.100.42 - - [24/May/2026:12:00:00 +0530] "GET /products.php?id=1%20UNION%20SELECT%20null,username,password%20FROM%20users HTTP/1.1" 200 1204 "-" "Mozilla/5.0"'
+            },
+            {
+                id: 2,
+                timestamp: new Date(now - 3600000 * 1.5).toISOString(),
+                rule_name: "Sensitive Path Access",
+                source_ip: "203.0.113.88",
+                severity: "Medium",
+                status: "Resolved",
+                description: "Access attempt targeting administrative, configuration, or environment files.",
+                raw_log: '203.0.113.88 - - [24/May/2026:12:30:00 +0530] "GET /.env HTTP/1.1" 404 150 "-" "Mozilla/5.0"'
+            },
+            {
+                id: 3,
+                timestamp: new Date(now - 60000 * 10).toISOString(),
+                rule_name: "Failed SSH Login Attempt",
+                source_ip: "185.220.101.5",
+                severity: "Low",
+                status: "New",
+                description: "A failed SSH authentication attempt was detected. (User: admin)",
+                raw_log: '2026-05-24T14:45:00+05:30 [INFO] sshd[12401]: Failed password for admin from 185.220.101.5 port 54312 ssh2'
+            }
+        ];
+        localStorage.setItem("aegis_alerts", JSON.stringify(defaultAlerts));
+    }
+}
+
+function getMockAlerts(severity, status) {
+    let alerts = JSON.parse(localStorage.getItem("aegis_alerts") || "[]");
+    alerts.sort((a, b) => b.id - a.id);
+    
+    if (severity) {
+        alerts = alerts.filter(a => a.severity === severity);
+    }
+    if (status) {
+        alerts = alerts.filter(a => a.status === status);
+    }
+    return { status: "success", data: alerts };
+}
+
+function getMockStats() {
+    const alerts = JSON.parse(localStorage.getItem("aegis_alerts") || "[]");
+    
+    const total_alerts = alerts.length;
+    const active_alerts = alerts.filter(a => a.status === "New").length;
+    
+    const severity_breakdown = {
+        Critical: alerts.filter(a => a.severity === "Critical").length,
+        High: alerts.filter(a => a.severity === "High").length,
+        Medium: alerts.filter(a => a.severity === "Medium").length,
+        Low: alerts.filter(a => a.severity === "Low").length
+    };
+    
+    const ipCounts = {};
+    alerts.forEach(a => {
+        ipCounts[a.source_ip] = (ipCounts[a.source_ip] || 0) + 1;
+    });
+    
+    const top_ips = Object.entries(ipCounts)
+        .map(([ip, count]) => ({ ip, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+        
+    return {
+        status: "success",
+        data: {
+            total_alerts,
+            active_alerts,
+            severity_breakdown,
+            top_ips
+        }
+    };
+}
+
+function updateMockAlertStatus(id, status) {
+    const alerts = JSON.parse(localStorage.getItem("aegis_alerts") || "[]");
+    const idx = alerts.findIndex(a => a.id === id);
+    if (idx !== -1) {
+        alerts[idx].status = status;
+        localStorage.setItem("aegis_alerts", JSON.stringify(alerts));
+    }
+}
+
+function clearMockAlerts() {
+    localStorage.setItem("aegis_alerts", JSON.stringify([]));
+}
+
+function triggerMockSimulation(attackType) {
+    const alerts = JSON.parse(localStorage.getItem("aegis_alerts") || "[]");
+    const nextId = alerts.length > 0 ? Math.max(...alerts.map(a => a.id)) + 1 : 1;
+    const now = new Date().toISOString();
+    
+    const MALICIOUS_IPS = ["198.51.100.42", "203.0.113.88", "185.220.101.5", "45.143.203.14", "91.241.19.84"];
+    const NORMAL_IPS = ["192.168.1.15", "10.0.0.4", "192.168.1.105", "182.21.43.109", "122.160.231.10"];
+    const USERNAMES = ["root", "admin", "ubuntu", "user", "oracle", "test", "support"];
+    
+    const randomMaliciousIp = MALICIOUS_IPS[Math.floor(Math.random() * MALICIOUS_IPS.length)];
+    const randomNormalIp = NORMAL_IPS[Math.floor(Math.random() * NORMAL_IPS.length)];
+    const randomUser = USERNAMES[Math.floor(Math.random() * USERNAMES.length)];
+    
+    if (attackType === "normal") {
+        console.log("[Demo] Simulated normal traffic successfully.");
+        return;
+    }
+    
+    let newAlerts = [];
+    
+    if (attackType === "brute_force") {
+        let tempId = nextId;
+        for (let i = 0; i < 5; i++) {
+            newAlerts.push({
+                id: tempId++,
+                timestamp: new Date(Date.now() - (5 - i) * 1000).toISOString(),
+                rule_name: "Failed SSH Login Attempt",
+                source_ip: randomMaliciousIp,
+                severity: "Low",
+                status: "New",
+                description: `A failed SSH authentication attempt was detected. (User: ${randomUser})`,
+                raw_log: `${now} [INFO] sshd[${Math.floor(Math.random() * 20000) + 10000}]: Failed password for ${randomUser} from ${randomMaliciousIp} port ${Math.floor(Math.random() * 25000) + 40000} ssh2`
+            });
+        }
+        
+        newAlerts.push({
+            id: tempId,
+            timestamp: now,
+            rule_name: "SSH Login Brute Force",
+            source_ip: randomMaliciousIp,
+            severity: "High",
+            status: "New",
+            description: `IP address ${randomMaliciousIp} triggered brute-force threshold: 5 failed attempts within 60s.`,
+            raw_log: `Multiple failures. Last log: Failed password for ${randomUser} from ${randomMaliciousIp}`
+        });
+    } else if (attackType === "sqli") {
+        newAlerts.push({
+            id: nextId,
+            timestamp: now,
+            rule_name: "SQL Injection Attempt",
+            source_ip: randomMaliciousIp,
+            severity: "Critical",
+            status: "New",
+            description: "SQL injection signatures detected in the request URL or parameters.",
+            raw_log: `${randomMaliciousIp} - - [${now}] "GET /products.php?id=1%20UNION%20SELECT%20null,username,password%20FROM%20users HTTP/1.1" 200 1204 "-" "Mozilla/5.0"`
+        });
+    } else if (attackType === "xss") {
+        newAlerts.push({
+            id: nextId,
+            timestamp: now,
+            rule_name: "Cross-Site Scripting (XSS) Attempt",
+            source_ip: randomMaliciousIp,
+            severity: "High",
+            status: "New",
+            description: "XSS script execution tags detected in incoming web request.",
+            raw_log: `${randomMaliciousIp} - - [${now}] "GET /comment.php?msg=<script>alert('hack')</script> HTTP/1.1" 200 450 "-" "Mozilla/5.0"`
+        });
+    } else if (attackType === "dir_traversal") {
+        newAlerts.push({
+            id: nextId,
+            timestamp: now,
+            rule_name: "Directory Traversal Attempt",
+            source_ip: randomMaliciousIp,
+            severity: "High",
+            status: "New",
+            description: "Directory traversal attempt targeting sensitive files or path evasion.",
+            raw_log: `${randomMaliciousIp} - - [${now}] "GET /download.php?file=../../../../etc/passwd HTTP/1.1" 403 220 "-" "Mozilla/5.0"`
+        });
+    } else if (attackType === "sensitive_path") {
+        const paths = ["/.env", "/wp-admin", "/config/db.php", "/phpinfo.php"];
+        const path = paths[Math.floor(Math.random() * paths.length)];
+        newAlerts.push({
+            id: nextId,
+            timestamp: now,
+            rule_name: "Sensitive Path Access",
+            source_ip: randomMaliciousIp,
+            severity: "Medium",
+            status: "New",
+            description: "Access attempt targeting administrative, configuration, or environment files.",
+            raw_log: `${randomMaliciousIp} - - [${now}] "GET ${path} HTTP/1.1" 404 150 "-" "Mozilla/5.0"`
+        });
+    }
+    
+    const updatedAlerts = [...alerts, ...newAlerts];
+    localStorage.setItem("aegis_alerts", JSON.stringify(updatedAlerts));
+}
+
 let severityChartInstance = null;
 let currentAlerts = [];
 let lastAlertId = 0;
