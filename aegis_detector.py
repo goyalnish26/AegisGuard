@@ -137,7 +137,8 @@ def process_log_line(log_type, line, rules):
                 desc += f" (User: {user})"
                 
             print(f"[*] ALERT [{severity}] {name} from {source_ip}: {desc}")
-            aegis_db.add_alert(source_ip, name, severity, desc, decoded_line)
+            aegis_db.add_alert(source_ip, name, severity, desc, decoded_line,
+                               mitre_id=rule.get("mitre_id"), mitre_name=rule.get("mitre_name"))
             
             # Send Webhook dispatch for High/Critical alerts
             send_webhook_alert(source_ip, name, severity, desc)
@@ -176,7 +177,8 @@ def handle_ssh_failed_login(ip, raw_line, rules):
         desc = f"IP address {ip} triggered brute-force threshold: {len(failed_ssh_attempts[ip])} failed attempts within {window}s."
         
         print(f"[!] CRITICAL ALERT [{severity}] {name} from {ip}: {desc}")
-        aegis_db.add_alert(ip, name, severity, desc, f"Multiple failures. Last log: {raw_line}")
+        aegis_db.add_alert(ip, name, severity, desc, f"Multiple failures. Last log: {raw_line}",
+                           mitre_id=brute_rule.get("mitre_id"), mitre_name=brute_rule.get("mitre_name"))
         
         # Send Webhook dispatch
         send_webhook_alert(ip, name, severity, desc)

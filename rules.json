@@ -7,6 +7,8 @@
       "severity": "Low",
       "pattern": "Failed password for (invalid user )?(\\S+) from (\\d+\\.\\d+\\.\\d+\\.\\d+)",
       "description": "A failed SSH authentication attempt was detected.",
+      "mitre_id": "T1110",
+      "mitre_name": "Brute Force",
       "extract_fields": {
         "user": 2,
         "ip": 3
@@ -21,7 +23,9 @@
       "is_stateful": true,
       "trigger_rule_id": "RULE_SSH_FAILED_PWD",
       "threshold_count": 5,
-      "time_window_seconds": 60
+      "time_window_seconds": 60,
+      "mitre_id": "T1110",
+      "mitre_name": "Brute Force"
     },
     {
       "id": "RULE_SQL_INJECTION",
@@ -30,6 +34,8 @@
       "severity": "Critical",
       "pattern": "(?i)(union\\s+select|select\\s+.*\\s+from|insert\\s+into|'\\s+or\\s+'\\d+'\\s*=\\s*'\\d+)",
       "description": "SQL injection signatures detected in the request URL or parameters.",
+      "mitre_id": "T1190",
+      "mitre_name": "Exploit Public-Facing Application",
       "extract_fields": {
         "ip": 0
       }
@@ -41,6 +47,8 @@
       "severity": "High",
       "pattern": "(\\.{2}/|\\.{2}\\\\|/etc/passwd|/boot\\.ini|win\\.ini)",
       "description": "Directory traversal attempt targeting sensitive files or path evasion.",
+      "mitre_id": "T1083",
+      "mitre_name": "File and Directory Discovery",
       "extract_fields": {
         "ip": 0
       }
@@ -52,6 +60,8 @@
       "severity": "High",
       "pattern": "(?i)(<script>|javascript:|onerror\\s*=|onload\\s*=|<svg)",
       "description": "XSS script execution tags detected in incoming web request.",
+      "mitre_id": "T1189",
+      "mitre_name": "Drive-by Compromise",
       "extract_fields": {
         "ip": 0
       }
@@ -63,6 +73,8 @@
       "severity": "Medium",
       "pattern": "(?i)(/\\.env|/wp-admin|/admin|/config|/setup\\.php|/phpinfo\\.php)",
       "description": "Access attempt targeting administrative, configuration, or environment files.",
+      "mitre_id": "T1595",
+      "mitre_name": "Active Scanning",
       "extract_fields": {
         "ip": 0
       }
